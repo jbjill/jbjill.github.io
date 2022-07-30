@@ -1,1 +1,459 @@
-Hello World
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+	body { font: 12px Arial;
+			fill: 'darkslategrey'}
+
+	path { 
+		stroke: darkslategray;
+		stroke-width: 2;
+		fill: none;
+	}
+
+	.legend {
+		font-size: 16px;         
+		font-weight: bold;         
+		text-anchor: start;
+		}
+
+</style>
+<body>
+	<!-- Load d3.js -->
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+
+	<!-- Load d3-annotation -->
+	<script src="https://rawgit.com/susielu/d3-annotation/master/d3-annotation.min.js"></script>
+
+	<div id='chartarea'></div>
+	<script>
+	var svg = d3.select('#chartarea')
+				.append('svg')
+				.attr('width',1000)
+				.attr('height',630);
+
+	d3.csv("data/Electric_Vehicle_Population_Data_Agg.csv",function(data) {
+
+	    var margin = 100;
+	    var width = 1000 - 2*margin;
+	    var height = 600 - 2*margin;
+
+	    //var data2 = data.filter( function(d){return d.ModelYear=='2016'} )
+
+	    //change color of bars when hover over
+	    var staticColor='darkgreen';
+	    var hoverColor='mediumaquamarine';
+		var curGroup=2012;
+	    //data2.sort(function(b,a) {
+	    //	return a.Volume - b.Volume;
+	    //});
+	    data = data.sort(function(b,a) {
+	   						return a.Volume - b.Volume;
+	    					});
+	    var init_data = data.filter(function(d){return d.ModelYear==2012})
+	    var init_domain = init_data.map(function(d){return d.Make;});
+	    var x = d3.scaleBand()
+				.range([ 0, width ])
+				.domain(init_data.map(function(d) { return d.Make; }))
+				.padding(0.2);
+	    
+		var maxVal=700//d3.max(data,function(d){return d.Volume;});
+	    var y = d3.scaleLinear()
+	        .domain([0, maxVal])
+	        .range([ height,0]);
+
+
+	    //title
+
+	    var title = svg.append("text")
+		    .attr("class", "title")
+		    .attr("text-anchor", "middle")
+      		.attr("transform", "translate(0,-15)")
+		    .attr("x", (width+2*margin)/2)
+		    .attr("y", margin/2 )
+		    .text("EV Volume Sold in Washington State in "+curGroup+" by Manufacturer")
+		    .style('font-size',"26px")
+		    .style('fill','darkslategrey')
+		    .style('font-weight','bold')
+		    ;
+
+	    var author = svg.append("text")
+		    .attr("class", "title")
+		    .attr("text-anchor", "middle")
+      		.attr("transform", "translate(0,0)")
+		    .attr("x", (width+2*margin)/2 )
+		    .attr("y", margin/2 +5)
+		    .text("Narrative Visualization for CS416 by Jennifer Jasperse (jbj3)")
+		    .style('font-size',"16px")
+		    .style('fill','darkslategrey')
+		    ;
+	      
+	    var subtitle1 = svg.append("text")
+		    .attr("class", "title")
+		    .attr("text-anchor", "middle")
+      		.attr("transform", "translate(0,0)")
+		    .attr("x", (width+2*margin)/2)
+		    .attr("y", margin/2 +30)
+		    .text("Which companies have led EV adoption from 2012 to 2020?")
+		    .style('font-size',"16px")
+		    .style('fill','darkslategrey')
+		    .style('font-weight','bold')
+		    ;
+
+	    var subtitle2 = svg.append("text")
+		    .attr("class", "title")
+		    .attr("text-anchor", "middle")
+      		.attr("transform", "translate(0,0)")
+		    .attr("x", (width+2*margin)/2)
+		    .attr("y", margin/2 +45)
+		    .text("Use the buttons on the bottom to select a year and hover over a bar to see more details.")
+		    .style('font-size',"16px")
+		    .style('fill','darkslategrey')
+		    .style('font-weight','bold')
+		    ;
+	      // Add Y axis
+	    var y_axis = d3.select('svg')
+	        .append("g")
+	        .attr("class","y_axis")
+	        .attr("transform", "translate(" + margin + "," + margin + ")")
+	        .call(d3.axisLeft(y));
+
+	    svg.append("text")
+		    .attr("class", "y label")
+		    .attr("text-anchor", "end")
+      		.attr("transform", "translate(-250,250)rotate(-90)")
+		    .attr("x", -10)
+		    .attr("y", (height+2*margin)/2)
+		    .text("Volume Sold")
+		    ;
+
+	    var x_axis = d3.select('svg')
+	        .append("g")
+	        .attr("transform", "translate(" + margin + "," + 500 + ")")
+	        .attr("class","x_axis")
+	        .call(d3.axisBottom(x))
+	        .selectAll("text")
+      		.attr("transform", "translate(-10,0)rotate(-45)")
+	                //.tickFormat(d3.format('~s'))
+	                //.tickValues([10,20,50,100]))
+	     	 .attr('text-anchor','end');
+
+	    svg.append("text")
+		    .attr("class", "x label")
+		    .attr("text-anchor", "middle")
+      		.attr("transform", "translate(0,0)")
+		    .attr("x", (width+2*margin)/2)
+		    .attr("y", height+1.75*margin)
+		    .text("Manufacturer Name")
+		    ;
+	    
+		//Tooltips
+		var tooltip = d3.select("#chartarea")
+		    .append("div")
+		    .style("opacity", 0)
+		    .attr("class", "tooltip")
+		    .style("position","absolute")
+		    .style("font","Arial")
+		    .style("background-color", "white")
+		    .style("border", "solid")
+		    .style("border-width", "1px")
+		    .style("border-radius", "3px")
+		    .style("padding", "7px");
+
+		var texttip = d3.select("#chartarea")
+		    .append("div")
+		    .style("opacity", 0)
+		    .style("position","absolute")
+		    .style("font","Arial")
+		    .style("background-color", "white")
+		    .style("border", "solid")
+		    .style("border-width", "1px")
+		    .style("border-radius", "3px")
+		    .style("padding", "7px");
+
+	    var bars = d3.select('svg')
+	      .append('g')
+	      .attr("transform", "translate(" + margin + "," + margin + ")") 
+	      .selectAll("rect")
+	      .data(data.filter(function(d){return d.ModelYear==2012}))
+	      .enter()
+	      .append("rect")
+	      .attr("x", function(d) { return x(d.Make); })
+	      .attr("y", function(d) { return y(d.Volume);})
+	      .attr("width",x.bandwidth())
+	      .attr("height",function(d){return height - y(d.Volume);})
+	      .attr('fill',staticColor)
+	      .on('mouseover', function (d, i) {
+          	tooltip.html(
+              `<div>Manufacturer: ${d.Make}</div><div>Volume: ${d.Volume}</div><div>Average Range (mi): ${d.Range}</div>`
+		            )
+       				.style("opacity", 1);
+		          d3.select(this).transition().attr('fill', hoverColor);
+		      })
+		      .on('mousemove', function () {
+		          tooltip
+      				.style("left", (d3.mouse(this)[0]+1) + "px")
+      				.style("top", (d3.mouse(this)[1]-1) + "px")
+		      })
+		      .on('mouseleave', function () {
+		          tooltip.html('').style("opacity", 0);
+		          d3.select(this).transition().attr('fill', staticColor);
+		      });
+
+
+		//ANNOTATIONS
+		const annotations = [
+		  [{
+		    note: {
+		      label: "In 2012, Nissan far outsold their limited competition with an average range of just 73mi.",
+		      title: "2012: Nissan rules the early market",
+		      align: "middle",  
+		      wrap: 200, 
+		      padding: 10  
+		    },
+		    color: ['darkslategrey'],
+		    x: 220,
+		    y: 300,
+		    dy: -100,
+		    dx: 200
+		  }],
+		  [{
+		    note: {
+		      label: "By 2016, Tesla had taken the top spot for EV market share, boasting an average range of 200mi, over twice as far as any of their other competitors.",
+		      title: "2016: Tesla takes the #1 spot",
+		      align: "middle",  
+		      wrap: 200, 
+		      padding: 10  
+		    },
+		    color: ['darkslategrey'],
+		    x: 160,
+		    y: 180,
+		    dy: 80,
+		    dx: 200
+		  }],
+		  [{
+		    note: {
+		      label: "In 2020, after the introduction of the Model 3, Tesla had captured nearly 75% of the market despite significant improvements by other competitors in the average range of vehicles offered. They still boasted the longest average range at nearly 300mi.",
+		      title: "2020: Tesla dominates the EV market",
+		      align: "middle",  
+		      wrap: 200, 
+		      padding: 10  
+		    },
+		    color: ['darkslategrey'],
+		    x: 170,
+		    y: 380,
+		    dy: -100,
+		    dx: 200
+		  }]
+		  
+		  
+		]
+
+		// Add annotation to the chart
+		var makeAnnotations = d3.annotation()
+		  						.annotations(annotations[0]);
+		var ants = d3.select("svg")
+		  .append("g")
+		  .attr("class","annotation")
+		  .call(makeAnnotations);
+
+
+	//UPDATES
+	    
+    // A function that update the chart
+    function update(selectedGroup) {
+      curGroup = selectedGroup;
+      // Create new data with the selection
+      var dataFilter = data.filter(function(d){return d.ModelYear==selectedGroup})
+      dataFilter=dataFilter.sort(function(b,a) {
+	   						return a.Volume - b.Volume;
+	    					});
+
+      //update title
+      title
+      	.text("EV Volume Sold in Washington State in "+selectedGroup+" by Manufacturer");
+      //update y axis
+      maxVal=d3.max(dataFilter,function(d){return +d.Volume +100;});
+      y=y.domain([0, maxVal]);
+	  y_axis.transition()
+          .duration(1000).call(d3.axisLeft(y));
+
+      //update x axis
+      var x2 = d3.scaleBand()
+      		     .range([ 0, width ])
+      		     .domain(dataFilter.map(function(d) { return d.Make; }))
+      		     .padding(0.2);
+      x_axis = d3.select('svg').select('g.x_axis')
+	  //x_axis.transition().duration(1000)      
+	  		.attr("transform", "translate(" + margin + "," + 500 + ")")
+	        .attr("class","x_axis")
+	        .call(d3.axisBottom(x2))
+	        .selectAll("text")
+      		.attr("transform", "translate(-10,0)rotate(-45)")
+	                //.tickFormat(d3.format('~s'))
+	                //.tickValues([10,20,50,100]))
+	     	 .attr('text-anchor','end');
+	  //update barchart   	 
+      bars
+          .data(dataFilter)
+          .transition()
+          .duration(1000)
+          .attr("x", function(d) { return x2(d.Make); })
+	      .attr("y", function(d) { return y(d.Volume);})
+	      .attr("width",x2.bandwidth())
+	      .attr("height",function(d){return height - y(d.Volume);})
+	  
+      //update annotations
+
+	  makeAnnotations = d3.annotation()
+		  .annotations(annotations[(selectedGroup==2012) ? 0: (selectedGroup==2016) ? 1: 2]);
+
+	  d3.select('svg').select('g.annotation').call(makeAnnotations);
+
+	  //ants.transition()
+      //    .duration(1000).call(makeAnnotations);
+    }
+
+
+
+    //BUTTONS
+
+    var textHoverColor='steelblue';
+	svg.append("text")
+		.attr("x", ((width+2*margin)/2) - 140)             
+		.attr("y", height +margin+ 105)    
+		.attr("class", "legend")
+		.attr("id","text_previous")
+		.attr("fill", "darkgrey")         
+		.on("click", function(){
+			// Determine if current line is visible
+			var selectedOption = (curGroup==2012) ? 2020 : (curGroup==2016) ? 2012 : 2016;
+    		update(selectedOption);
+    		svg.select('#text_2012')
+    			.style("fill",(selectedOption==2012)? "steelblue" : "lightgrey");
+    		svg.select('#text_2016')
+    			.style("fill",(selectedOption==2016)? "steelblue" : "lightgrey");
+    		svg.select('#text_2020')
+    			.style("fill",(selectedOption==2020)? "steelblue" : "lightgrey");
+
+		})
+		.text("< Prev");
+
+	svg.append("text")
+		.attr("x", ((width+2*margin)/2) - 70)             
+		.attr("y", height +margin+ 105)    
+		.attr("class", "legend")
+		.attr("id","text_2012")
+	    .attr('text-anchor','middle')
+		.style("fill", "steelblue")         
+		.on("click", function(){
+			// Determine if current line is visible
+			var selectedOption = 2012;
+    		update(selectedOption);
+    		svg.select('#text_2012')
+    			.style("fill","steelblue");
+    		svg.select('#text_2016')
+    			.style("fill","lightgrey");
+    		svg.select('#text_2020')
+    			.style("fill","lightgrey");
+
+		})
+		.text("2012");
+
+
+	svg.append("text")
+		.attr("x", ((width+2*margin)/2)-20)             
+		.attr("y", height +margin + 105)    
+		.attr("class", "legend")
+		.attr("id","text_2016")
+		.style("fill", "lightgrey")         
+		.on("click", function(){
+			// Determine if current line is visible
+			var selectedOption = 2016;
+    		update(selectedOption);
+    		svg.select('#text_2012')
+    			.style("fill","lightgrey");
+    		svg.select('#text_2016')
+    			.style("fill","steelblue");
+    		svg.select('#text_2020')
+    			.style("fill","lightgrey");
+		})
+		.text("2016");
+
+
+    
+	svg.append("text")
+		.attr("x", ((width+2*margin)/2) + 30)             
+		.attr("y", height +margin+ 105)    
+		.attr("class", "legend")
+		.attr("id","text_2020")
+		.style("fill", "lightgrey")         
+		.on("click", function(){   
+			// Determine if current line is visible
+			var selectedOption = 2020;
+    		update(selectedOption);
+    		svg.select('#text_2012')
+    			.style("fill","lightgrey");
+    		svg.select('#text_2016')
+    			.style("fill","lightgrey");
+    		svg.select('#text_2020')
+    			.style("fill","steelblue");
+		})
+		.text("2020");
+
+
+	svg.append("text")
+		.attr("x", ((width+2*margin)/2) + 90)             
+		.attr("y", height +margin+ 105)    
+		.attr("class", "legend")
+		.attr("id","text_next")
+		.style("fill", "darkgrey")         
+		.on("click", function(){
+			// Determine if current line is visible
+			var selectedOption = (curGroup==2012) ? 2016 : (curGroup==2016) ? 2020 : 2012;
+    		update(selectedOption);
+    		svg.select('#text_2012')
+    			.style("fill",(selectedOption==2012)? "steelblue" : "lightgrey");
+    		svg.select('#text_2016')
+    			.style("fill",(selectedOption==2016)? "steelblue" : "lightgrey");
+    		svg.select('#text_2020')
+    			.style("fill",(selectedOption==2020)? "steelblue" : "lightgrey");
+
+		})
+		.text("Next >");
+
+	svg.append("text")
+		.attr("x", ((width+2*margin)/2) -25)             
+		.attr("y", height +margin+ 130)    
+		.attr("class", "legend")
+		.attr("id","label")
+		.style("fill", "darkgrey") 
+		.style('font-size','20px')
+		.text('Year');
+
+	      
+    })
+
+
+	</script>
+	<p style="font-weight:bold;">References: </p>
+	<p> Data Source: https://data.wa.gov/api/views/f6w7-q2d2/rows.csv?accessType=DOWNLOAD</p>
+	<p> Help with slideshow setup:</p>
+	<ul>
+		<li>  https://d3-graph-gallery.com/graph/line_filter.html</li>
+		<li>  https://bl.ocks.org/d3noob/5d621a60e2d1d02086bf</li>
+	</ul>
+	<p> Help with barplots:</p>
+	<ul>
+		<li>  https://d3-graph-gallery.com/graph/barplot_ordered.html</li>
+	</ul>
+	<p> Help with tooltips:</p>
+	<ul>
+		<li>  https://d3-graph-gallery.com/graph/barplot_stacked_hover.html</li>
+		<li>  https://observablehq.com/@bsaienko/animated-bar-chart-with-tooltip</li>
+	</ul>
+	<p> Help with annotations:</p>
+	<ul>
+		<li> https://d3-graph-gallery.com/graph/custom_annotation.html</li>
+	</ul>
+</body>
